@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>job.run.place — AI Resume Tailoring</title>
+<style>
+  :root{ --bg:#f5f7fb; --bg2:#eef2f8; --card:#fff; --text:#16202e; --muted:#62708a;
+    --border:#e2e8f2; --accent:#4f7cff; --accent-soft:#eaf0ff; --ok:#1f9d6b; --warn:#c98a00;
+    --danger:#d8543f; --gold:#b8860b; --shadow:0 6px 24px rgba(20,30,60,.07); }
+  [data-theme="dark"]{ --bg:#0e1320; --bg2:#0a0f1a; --card:#161d2e; --text:#e8edf6; --muted:#94a2bd;
+    --border:#26304a; --accent:#6b94ff; --accent-soft:#1b2540; --ok:#3fcf93; --warn:#e6b24d;
+    --danger:#ff7a63; --gold:#e6c35a; --shadow:0 8px 30px rgba(0,0,0,.35); }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Inter',system-ui,Segoe UI,Roboto,sans-serif;
+    background:linear-gradient(180deg,var(--bg),var(--bg2)); color:var(--text); min-height:100vh; }
+  header{ position:sticky; top:0; z-index:20; backdrop-filter:blur(10px);
+    background:color-mix(in srgb,var(--card) 82%,transparent); border-bottom:1px solid var(--border);
+    padding:11px 22px; display:flex; justify-content:space-between; align-items:center; }
+  .brand{ display:flex; align-items:center; gap:9px; font-weight:800; font-size:17px; letter-spacing:-.02em; }
+  .brand .dot{ width:24px; height:24px; border-radius:8px; background:linear-gradient(135deg,var(--accent),#9b6bff); }
+  .brand .tld{ color:var(--accent); }
+  .hgroup{ display:flex; align-items:center; gap:9px; }
+  main{ max-width:1240px; margin:22px auto; padding:0 16px; }
+  .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px;
+    margin-bottom:16px; box-shadow:var(--shadow); }
+  h2{ margin:0 0 4px; font-size:19px; } h3{ margin:0; font-size:15px; }
+  .muted{ color:var(--muted); font-size:13.5px; }
+  button{ background:var(--accent); color:#fff; border:0; border-radius:10px; padding:10px 16px;
+    font-size:14px; font-weight:600; cursor:pointer; transition:transform .08s,filter .15s; }
+  button:hover:not(:disabled){ filter:brightness(1.07); } button:active:not(:disabled){ transform:translateY(1px); }
+  button:disabled{ opacity:.5; cursor:not-allowed; }
+  button.ghost{ background:transparent; color:var(--text); border:1px solid var(--border); }
+  button.soft{ background:var(--accent-soft); color:var(--accent); }
+  button.gold{ background:linear-gradient(135deg,#c9952c,#a06a00); }
+  .icon-btn{ background:transparent; border:1px solid var(--border); color:var(--text);
+    width:36px; height:36px; padding:0; border-radius:10px; font-size:15px; }
+  .mini-btn{ background:var(--bg2); border:1px solid var(--border); color:var(--text);
+    width:24px; height:24px; padding:0; border-radius:6px; font-size:12px; line-height:1; }
+  input,textarea,select{ width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px;
+    font-size:14px; font-family:inherit; background:var(--card); color:var(--text); }
+  input:read-only{ opacity:.7; } textarea{ min-height:80px; resize:vertical; }
+  label{ display:block; font-size:13px; font-weight:600; margin:12px 0 5px; }
+  .row{ display:flex; gap:12px; } .row>*{ flex:1; }
+  .tabs{ display:flex; gap:8px; margin-bottom:16px; }
+  .tab{ padding:9px 16px; border-radius:999px; cursor:pointer; font-weight:600; font-size:14px;
+    border:1px solid var(--border); background:var(--card); color:var(--muted); }
+  .tab.active{ background:var(--accent); color:#fff; border-color:transparent; }
+  .drop{ border:2px dashed var(--border); border-radius:14px; padding:26px; text-align:center; cursor:pointer; }
+  .drop.hover{ border-color:var(--accent); background:var(--accent-soft); }
+  .pill{ display:inline-block; background:var(--accent-soft); color:var(--accent); border-radius:999px;
+    padding:4px 11px; font-size:12px; margin:3px 3px 0 0; font-weight:600; }
+  .badge{ font-size:11px; padding:2px 8px; border-radius:6px; background:var(--bg2); color:var(--muted);
+    border:1px solid var(--border); text-transform:uppercase; letter-spacing:.04em; }
+  .badge.pro{ background:var(--gold); color:#fff; border:0; }
+  .credits-pill{ display:flex; align-items:center; gap:6px; background:var(--accent-soft); color:var(--accent);
+    border-radius:999px; padding:7px 13px; font-weight:700; font-size:13.5px; cursor:pointer; border:0; }
+  .reslist{ display:flex; flex-direction:column; gap:10px; }
+  .resitem{ display:flex; justify-content:space-between; align-items:center; gap:10px;
+    border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
+  .gallery{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
+  .tpl{ border:2px solid var(--border); border-radius:12px; padding:10px; cursor:pointer; position:relative; }
+  .tpl:hover{ border-color:var(--accent); } .tpl.sel{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .tpl .cap{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+  .tpl .lock{ position:absolute; top:8px; right:8px; z-index:2; }
+  .star{ color:var(--warn); font-size:12px; }
+  .note{ background:var(--accent-soft); border-radius:10px; padding:12px 14px; font-size:13.5px; }
+  .q{ border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+  .steps{ display:flex; gap:6px; margin-bottom:14px; font-size:12.5px; color:var(--muted); flex-wrap:wrap; }
+  .steps span.on{ color:var(--accent); font-weight:700; }
+  .spin{ display:inline-block; width:15px; height:15px; border:2px solid #fff; border-top-color:transparent;
+    border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px; margin-right:6px; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--danger);
+    color:#fff; padding:12px 18px; border-radius:10px; box-shadow:var(--shadow); z-index:80; opacity:0;
+    transition:.25s; pointer-events:none; max-width:90vw; } .toast.show{ opacity:1; } .toast.ok{ background:var(--ok); }
+  .fade{ animation:fade .25s ease; } @keyframes fade{ from{opacity:0;transform:translateY(6px);} to{opacity:1;} }
+  .hidden{ display:none !important; }
+  .scores{ display:flex; gap:14px; flex-wrap:wrap; }
+  .meter{ flex:1; min-width:150px; border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
+  .meter .num{ font-size:28px; font-weight:800; } .meter .lbl{ font-size:12px; color:var(--muted); }
+  .bar{ height:8px; border-radius:99px; background:var(--bg2); margin-top:8px; overflow:hidden; }
+  .bar>i{ display:block; height:100%; border-radius:99px; }
+  .delta{ font-size:12px; font-weight:700; margin-left:6px; }
+  /* login hero */
+  .hero{ text-align:center; padding:44px 20px; }
+  .hero h1{ font-size:34px; margin:0 0 8px; letter-spacing:-.03em; }
+  .hero h1 .tld{ color:var(--accent); }
+  .hero p{ max-width:560px; margin:0 auto 22px; color:var(--muted); font-size:15px; }
+  .hero .feats{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:26px; }
+  /* result two-column layout */
+  .result-grid{ display:grid; grid-template-columns:minmax(0,1fr) 350px; gap:16px; align-items:start; }
+  @media (max-width:1100px){ .result-grid{ grid-template-columns:1fr; } }
+  .toolbar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .pdf-flex{ display:flex; gap:10px; align-items:stretch; }
+  .secstrip{ flex:0 0 168px; display:flex; flex-direction:column; gap:6px; }
+  .ss-title{ font-size:11px; font-weight:800; letter-spacing:.06em; color:var(--muted); text-transform:uppercase; margin:4px 0 2px; }
+  .ss-chip{ display:flex; align-items:center; justify-content:space-between; gap:4px;
+    border:1px solid var(--border); background:var(--card); border-radius:9px; padding:6px 8px; font-size:12px; font-weight:600; }
+  .ss-chip.off{ opacity:.55; }
+  .ss-chip .ops{ display:flex; gap:3px; }
+  @media (max-width:760px){ .pdf-flex{ flex-direction:column; } .secstrip{ flex-direction:row; flex-wrap:wrap; } }
+  /* resume preview doc */
+  .preview-wrap{ background:var(--bg2); border-radius:12px; padding:14px; display:flex; justify-content:center; }
+  .resume-doc{ background:#fff; color:#1a1a1a; width:100%; max-width:720px; padding:30px 34px;
+    border-radius:6px; box-shadow:0 4px 18px rgba(0,0,0,.12); font-size:12.5px; line-height:1.4; }
+  .resume-doc .rs-name{ text-align:center; font-size:24px; font-weight:800; }
+  .resume-doc .rs-contact{ text-align:center; font-size:11px; color:#555; margin:3px 0 8px; }
+  .resume-doc .rs-h{ font-weight:800; font-size:12.5px; letter-spacing:.04em; margin:11px 0 5px; padding-bottom:2px; }
+  .resume-doc .rs-role{ display:flex; justify-content:space-between; font-weight:700; }
+  .resume-doc .rs-sub{ font-style:italic; color:#555; font-size:11px; }
+  .resume-doc ul{ margin:3px 0 6px; padding-left:18px; } .resume-doc li{ margin:1px 0; }
+  .mini{ height:150px; overflow:hidden; border-radius:8px; border:1px solid var(--border); background:#fff; position:relative; }
+  .mini .scaler{ position:absolute; top:0; left:0; width:720px; transform:scale(.27); transform-origin:top left; }
+  .mini .resume-doc{ box-shadow:none; border-radius:0; }
+  /* pricing modal */
+  .overlay{ position:fixed; inset:0; background:rgba(10,15,30,.55); z-index:60; display:flex;
+    align-items:center; justify-content:center; padding:16px; }
+  .modal{ background:var(--card); border:1px solid var(--border); border-radius:18px; padding:24px;
+    max-width:760px; width:100%; max-height:90vh; overflow:auto; box-shadow:var(--shadow); }
+  .plans{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:14px; }
+  .plan{ border:1px solid var(--border); border-radius:14px; padding:16px; text-align:center; }
+  .plan.pro{ border-color:var(--gold); box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 22%,transparent); }
+  .plan .price{ font-size:24px; font-weight:800; margin:6px 0; }
+  .plan ul{ text-align:left; font-size:12.5px; color:var(--muted); padding-left:18px; margin:8px 0; }
+  details{ border:1px solid var(--border); border-radius:12px; padding:10px 14px; margin:10px 0; }
+  summary{ cursor:pointer; font-weight:600; font-size:13.5px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span> job<span class="tld">.run</span>.place</div>
+  <div class="hgroup" id="hright"><button class="icon-btn" id="themeBtn" title="Toggle theme">🌙</button></div>
+</header>
+<main id="app"><div class="card">Loading…</div></main>
+<div class="toast" id="toast"></div>
+<div class="overlay hidden" id="pricing"></div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const app=$("#app");
+let S={ user:null, health:{}, billing:null, resumes:[], profile:null, templates:[], tmplById:{}, emptyData:null,
+  view:"app", tab:"data", job:{title:"",company:"",jd:""}, analysis:null, answers:{}, template:"technical",
+  result:null, edit:null, showTplPicker:false, outreach:null, includeSummary:null, summaryTouched:false, applications:[],
+  authMode:"login" };
+
+/* ---------------- basics ---------------- */
+function applyTheme(t){ document.documentElement.dataset.theme=t; localStorage.setItem("theme",t);
+  const b=$("#themeBtn"); if(b) b.textContent=t==="dark"?"☀️":"🌙"; }
+async function api(path,opts={},isForm=false){
+  const o={ credentials:"same-origin", ...opts };
+  if(!isForm) o.headers={"Content-Type":"application/json",...(opts.headers||{})};
+  const res=await fetch(path,o);
+  if(!res.ok){ const d=await res.json().catch(()=>({detail:res.statusText}));
+    const err=new Error(d.detail||"Request failed"); err.status=res.status; throw err; }
+  const ct=res.headers.get("content-type")||""; return ct.includes("json")?res.json():res;
+}
+function toast(m,ok=false){ const t=$("#toast"); t.textContent=m; t.classList.toggle("ok",!!ok);
+  t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3800); }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function mdb(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>'); }
+function safeUrl(u){ return /^https?:\/\//i.test(String(u||'')) ? String(u) : ''; }
+function deepclone(x){ return JSON.parse(JSON.stringify(x)); }
+function money(minor){ const cur=S.billing?.currency||'INR'; const sym=cur==='INR'?'₹':cur+' ';
+  return sym+(minor/100).toFixed((minor%100)?2:0); }
+function isPro(){ return !!(S.billing?.is_pro || S.user?.is_pro); }
+function creditsLeft(){ return S.billing?S.billing.credits:(S.user?.credits??0); }
+
+/* ---------------- init / header ---------------- */
+async function init(){
+  try{ S.health=await api("/healthz"); }catch(e){ S.health={}; }
+  const me=await api("/auth/me"); S.user=me.authenticated?me:null;
+  renderHeader();
+  if(!S.user) return renderLogin();
+  const t=await api("/resumes/templates"); S.templates=t.templates; S.emptyData=t.empty_data;
+  S.tmplById=Object.fromEntries(t.templates.map(x=>[x.id,x]));
+  await Promise.all([refreshData(), loadBilling()]);
+  render();
+}
+async function refreshData(){ S.resumes=await api("/resumes"); S.profile=await api("/resumes/profile"); }
+async function loadBilling(){ try{ S.billing=await api("/billing/info"); }catch(e){ S.billing=null; } renderHeader(); }
+async function logout(){ await api("/auth/logout",{method:"POST"}); location.reload(); }
+async function devLogin(){ await api("/auth/dev-login",{method:"POST"}); init(); }
+function renderHeader(){
+  const h=$("#hright");
+  let inner=`<button class="icon-btn" id="themeBtn" title="Toggle theme">🌙</button>`;
+  if(S.user){
+    inner=`<button class="credits-pill" onclick="openPricing()" title="Buy credits">⚡ ${creditsLeft()}${isPro()?' <span class="badge pro">PRO</span>':''}</button>
+      <button class="ghost" onclick="showProfile()">👤 My Profile</button>`+inner+
+      `<button class="ghost" onclick="logout()">Sign out</button>`;
+  }
+  h.innerHTML=inner;
+  $("#themeBtn").onclick=()=>applyTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
+  applyTheme(localStorage.getItem("theme")||"light");
+}
+
+/* ---------------- login ---------------- */
+function renderLogin(){
+  const showDev=S.health.environment && S.health.environment!=="production" && !S.health.auth_configured;
+  const signup=S.authMode==="signup";
+  app.innerHTML=`<div class="card fade hero">
+    <h1>job<span class="tld">.run</span>.place</h1>
+    <p>Upload your resume, paste any job, and get a tailored, ATS-optimized one-pager with a real match score — plus recruiter outreach messages that get replies. Nothing invented, ever.</p>
+    <div class="feats">
+      <span class="pill">🎯 Match &amp; ATS scores</span><span class="pill">📄 True 1-page PDF</span>
+      <span class="pill">📨 Recruiter outreach</span><span class="pill">📋 Job tracker</span></div>
+    <button style="font-size:15px;padding:12px 26px" onclick="location.href='/auth/login'">Continue with Google</button>
+    <div style="max-width:320px;margin:20px auto 0;text-align:left">
+      <div style="display:flex;align-items:center;gap:10px;margin:6px 0 16px;color:var(--muted);font-size:12px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>OR<div style="flex:1;height:1px;background:var(--border)"></div></div>
+      <label style="margin-top:0">Email</label><input id="auth_email" type="email" placeholder="you@example.com" autocomplete="email">
+      <label>Password</label><input id="auth_password" type="password" placeholder="${signup?'At least 8 characters':'Your password'}"
+        autocomplete="${signup?'new-password':'current-password'}" onkeydown="if(event.key==='Enter') submitAuth()">
+      ${signup?`<label>Name (optional)</label><input id="auth_name" placeholder="Your name" onkeydown="if(event.key==='Enter') submitAuth()">`:''}
+      <div id="authErr" style="color:var(--danger);font-size:13px;margin-top:8px;min-height:16px"></div>
+      <button id="authSubmitBtn" style="width:100%;margin-top:4px" onclick="submitAuth()">${signup?'Create account':'Log in'}</button>
+      <p class="muted" style="text-align:center;margin-top:10px">
+        ${signup?"Already have an account?":"Don't have an account?"}
+        <a href="#" onclick="toggleAuthMode();return false" style="color:var(--accent)">${signup?'Log in':'Sign up'}</a></p>
+    </div>
+    ${showDev?`<p class="muted" style="margin-top:10px"><button class="ghost" onclick="devLogin()">Dev login</button></p>`:''}
+  </div>`;
+}
+function toggleAuthMode(){ S.authMode = S.authMode==="signup"?"login":"signup"; renderLogin(); }
+async function submitAuth(){
+  const email=$("#auth_email").value.trim(); const password=$("#auth_password").value;
+  const errEl=$("#authErr"); errEl.textContent="";
+  if(!email||!password) return errEl.textContent="Enter your email and password.";
+  if(S.authMode==="signup" && password.length<8) return errEl.textContent="Password must be at least 8 characters.";
+  const btn=$("#authSubmitBtn"); const orig=btn.textContent;
+  btn.disabled=true; btn.innerHTML=`<span class="spin"></span>${S.authMode==="signup"?'Creating…':'Logging in…'}`;
+  try{
+    if(S.authMode==="signup"){
+      const name=$("#auth_name")?.value.trim()||"";
+      await api("/auth/signup",{method:"POST",body:JSON.stringify({email,password,name})});
+    } else {
+      await api("/auth/login",{method:"POST",body:JSON.stringify({email,password})});
+    }
+    init();
+  }catch(e){ errEl.textContent=e.message; btn.disabled=false; btn.textContent=orig; }
+}
+
+/* ---------------- shell ---------------- */
+function render(){
+  if(S.view==="profile") return renderProfile();
+  app.innerHTML=`<div class="tabs">
+    <div class="tab ${S.tab==='data'?'active':''}" onclick="setTab('data')">🏠 Build Profile</div>
+    <div class="tab ${S.tab==='tailor'?'active':''}" onclick="setTab('tailor')">✨ Tailor to a Job</div>
+    <div class="tab ${S.tab==='tracker'?'active':''}" onclick="setTab('tracker')">📋 Job Tracker</div></div><div id="view"></div>`;
+  S.tab==="data"?renderData():S.tab==="tailor"?renderTailor():renderTracker();
+}
+function setTab(t){ S.view="app"; S.tab=t; render(); }
+function showProfile(){ S.view="profile"; render(); }
+
+/* ---------------- shared preview rendering ---------------- */
+function previewHTML(data, style){
+  data=data||{}; const c=data.contact||{}; const accent='#'+(style.accent||'333'); const font=style.css_font||'system-ui';
+  const H=t=>`<div class="rs-h" style="color:${accent};border-bottom:${style.heading_rule?'1.5px solid '+accent:'none'};text-transform:${style.uppercase_headings?'uppercase':'none'}">${esc(t)}</div>`;
+  let h=`<div class="resume-doc" style="font-family:${font}">`;
+  h+=`<div class="rs-name" style="color:${accent}">${esc(c.full_name||'Your Name')}</div>`;
+  const cl=[c.email,c.phone,c.location,c.linkedin,c.website].filter(Boolean).map(esc).join('  |  ');
+  if(cl) h+=`<div class="rs-contact">${cl}</div>`;
+  for(const k of (style.section_order||[])){
+    if(k==='summary'){ if(style.include_summary && data.summary) h+=H('Summary')+`<div>${mdb(data.summary)}</div>`; }
+    else if(k==='skills'&&(data.skills||[]).length) h+=H('Skills')+`<div>${data.skills.map(esc).join(' • ')}</div>`;
+    else if(k==='experience'&&(data.experience||[]).length){ h+=H('Experience');
+      for(const j of data.experience){ const dt=[j.start_date,j.end_date].filter(Boolean).join(' – ');
+        h+=`<div class="rs-role"><span>${esc(j.title||'')}${j.company?' — '+esc(j.company):''}</span><span>${esc(dt)}</span></div>`;
+        if(j.location) h+=`<div class="rs-sub">${esc(j.location)}</div>`;
+        if((j.bullets||[]).length) h+=`<ul>${j.bullets.filter(Boolean).map(b=>`<li>${mdb(b)}</li>`).join('')}</ul>`; } }
+    else if(k==='projects'&&(data.projects||[]).length){ h+=H('Projects');
+      for(const p of data.projects){ h+=`<div><b>${esc(p.name||'')}</b>${p.description?' — '+mdb(p.description):''}</div>`;
+        if((p.bullets||[]).length) h+=`<ul>${p.bullets.filter(Boolean).map(b=>`<li>${mdb(b)}</li>`).join('')}</ul>`; } }
+    else if(k==='education'&&(data.education||[]).length){ h+=H('Education');
+      for(const e of data.education){ h+=`<div class="rs-role"><span>${esc(e.degree||'')}${e.institution?' — '+esc(e.institution):''}</span><span>${esc(e.graduation_date||'')}</span></div>`;
+        if(e.details) h+=`<div class="rs-sub">${esc(e.details)}</div>`; } }
+    else if(k==='achievements'&&(data.achievements||[]).length) h+=H('Achievements')+`<ul>${data.achievements.filter(Boolean).map(a=>`<li>${mdb(a)}</li>`).join('')}</ul>`;
+    else if(k==='certifications'&&(data.certifications||[]).length) h+=H('Certifications')+`<ul>${data.certifications.filter(Boolean).map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`;
+  }
+  return h+`</div>`;
+}
+function miniHTML(data, style){ return `<div class="mini"><div class="scaler">${previewHTML(data,style)}</div></div>`; }
+function meter(label, val, before){
+  const v=Math.max(0,Math.min(100,val||0)); const col=v>=75?'var(--ok)':v>=50?'var(--warn)':'var(--danger)';
+  let delta=''; if(before!=null){ const d=v-before; delta=`<span class="delta" style="color:${d>=0?'var(--ok)':'var(--danger)'}">${d>=0?'▲ +'+d:'▼ '+d}</span>`; }
+  return `<div class="meter"><div class="lbl">${esc(label)}</div><div class="num" style="color:${col}">${v}<span style="font-size:14px;color:var(--muted)">/100</span>${delta}</div>
+    <div class="bar"><i style="width:${v}%;background:${col}"></i></div></div>`;
+}
+function listBlock(title,items,color){ if(!items||!items.length) return '';
+  return `<div style="margin-top:10px"><b style="color:${color}">${esc(title)}</b><ul style="margin:4px 0">${items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`; }
+function pageBadge(pages){ if(pages==null) return '';
+  return pages<=1 ? `<span class="badge" style="background:var(--ok);color:#fff;border:0">✓ Fits 1 page</span>`
+    : `<span class="badge" style="background:var(--warn);color:#fff;border:0">⚠ ${pages} pages</span>`; }
+
+/* ================= BUILD PROFILE (home) ================= */
+function renderData(){
+  const p=S.profile||{skills:[],experience:[]};
+  $("#view").innerHTML=`
+  <div class="card fade">
+    <h2>Add your career data</h2>
+    <p class="muted">Upload resumes (PDF/DOCX/TXT), paste notes, or start from scratch — everything merges into one profile that powers your tailored resumes.</p>
+    <div class="drop" id="drop"><input type="file" id="file" accept=".pdf,.docx,.txt" class="hidden">
+      <div id="dropmsg">📄 <b>Click to browse</b> or drop a resume here</div></div>
+    <div class="row" style="margin-top:14px;align-items:flex-end">
+      <div style="flex:2"><label style="margin-top:0">No resume? Describe your experience &amp; skills here</label>
+        <textarea id="freeform" placeholder="e.g. 3 years as a backend developer at Acme. Led a 4-person team migrating billing to Stripe, cutting failed payments 30%. Skilled in Python, Go, Terraform…"></textarea></div>
+      <div style="flex:0 0 auto;display:flex;flex-direction:column;gap:8px">
+        <button id="ffBtn" onclick="saveFreeform()">＋ Add to my profile</button>
+        <button class="soft" onclick="openEditor()">📝 Add details manually</button></div></div>
+  </div>
+  ${S.resumes.length?`<div class="card fade" style="display:flex;justify-content:space-between;align-items:center">
+    <div><b>${esc(S.profile?.contact?.full_name||'Your profile')}</b>
+      <span class="muted">· ${(p.skills||[]).length} skills · ${(p.experience||[]).length} roles across ${S.resumes.length} document(s)</span></div>
+    <button class="soft" onclick="showProfile()">👤 View my profile →</button></div>`
+  :`<div class="note fade">Start by adding your data above — then head to <b>✨ Tailor to a Job</b>.</div>`}`;
+  wireDrop();
+}
+function wireDrop(){
+  const drop=$("#drop"),file=$("#file"); if(!drop) return;
+  drop.onclick=()=>file.click();
+  file.onchange=()=>file.files[0]&&uploadFile(file.files[0]);
+  ["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("hover");}));
+  ["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("hover");}));
+  drop.addEventListener("drop",ev=>ev.dataTransfer.files[0]&&uploadFile(ev.dataTransfer.files[0]));
+}
+async function uploadFile(f){
+  const msg=$("#dropmsg"); msg.innerHTML=`<span class="spin"></span> Parsing <b>${esc(f.name)}</b>… this takes a few seconds`;
+  try{ const fd=new FormData(); fd.append("file",f); const created=await api("/resumes/upload",{method:"POST",body:fd},true);
+    await refreshData(); openEditor(created);
+  }catch(e){ toast(e.message); msg.innerHTML=`📄 <b>Click to browse</b> or drop a resume here`; }
+}
+async function saveFreeform(){
+  const text=$("#freeform").value.trim(); if(text.length<10) return toast("Add a bit more detail first.");
+  const b=$("#ffBtn"); b.disabled=true; b.innerHTML=`<span class="spin"></span>Parsing…`;
+  try{ const created=await api("/resumes/freeform",{method:"POST",body:JSON.stringify({text})}); await refreshData(); openEditor(created);
+  }catch(e){ toast(e.message); b.disabled=false; b.textContent="＋ Add to my profile"; }
+}
+async function delResume(id){ try{ await api(`/resumes/${id}`,{method:"DELETE"}); await refreshData();
+  S.view==="profile"?renderProfile():renderData(); }catch(e){ toast(e.message); } }
+
+/* ================= MY PROFILE ================= */
+function renderProfile(){
+  const p=S.profile||{contact:{},skills:[],experience:[],education:[]};
+  app.innerHTML=`<div class="fade">
+    <p style="margin:0 0 12px"><button class="ghost" onclick="setTab('data')">← Back to app</button></p>
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <h2 style="margin:0">👤 Your profile</h2>
+      <span class="muted">${creditsLeft()} credit(s) ${isPro()?'· PRO until '+esc((S.billing?.pro_expires_at||'').slice(0,10)):''}</span></div>
+      ${S.resumes.length?`
+      <p style="margin:10px 0 4px"><b>${esc(p.contact?.full_name||'—')}</b> · ${esc(p.contact?.email||'')} ${p.contact?.location?'· '+esc(p.contact.location):''}</p>
+      <div>${(p.skills||[]).slice(0,24).map(s=>`<span class="pill">${esc(s)}</span>`).join('')}</div>
+      <p class="muted" style="margin-top:10px">${(p.experience||[]).length} role(s) · ${(p.education||[]).length} education entr(ies) merged across ${S.resumes.length} document(s).</p>`
+      :`<p class="muted">No data yet — add a resume from the Build Profile page.</p>`}</div>
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>🎯 Profile ATS score</h3><button class="soft" onclick="checkProfileAts()">Check now</button></div>
+      <div id="atsBox"></div></div>
+    <div class="card"><h3>Source documents</h3><div class="reslist" id="reslist" style="margin-top:12px"></div></div></div>`;
+  renderResList();
+}
+function renderResList(){
+  const el=$("#reslist"); if(!el) return;
+  if(S.resumes.length===0){ el.innerHTML=`<p class="muted">No documents yet.</p>`; return; }
+  el.innerHTML=S.resumes.map(r=>`<div class="resitem"><div><b>${esc(r.title||'Resume')}</b> <span class="badge">${esc(r.source||'manual')}</span>
+    <div class="muted">${(r.data.skills||[]).length} skills · ${(r.data.experience||[]).length} roles</div></div>
+    <div style="display:flex;gap:8px"><button class="ghost" onclick="editSource(${r.id})">Edit</button>
+      <button class="ghost" onclick="delResume(${r.id})">Delete</button></div></div>`).join('');
+}
+async function checkProfileAts(){
+  const box=$("#atsBox"); box.innerHTML=`<p class="muted" style="margin-top:12px"><span class="spin"></span>Scoring your profile…</p>`;
+  try{ const a=await api("/score/ats",{method:"POST",body:JSON.stringify({})});
+    box.innerHTML=`<div style="margin-top:14px" class="scores">${meter('ATS score',a.score)}</div>
+      ${listBlock('Strengths',a.strengths,'var(--ok)')}${listBlock('Flaws',a.flaws,'var(--danger)')}${listBlock('Suggestions',a.suggestions,'var(--accent)')}`;
+  }catch(e){ box.innerHTML=`<p class="muted" style="color:var(--danger);margin-top:12px">${esc(e.message)}</p>`; }
+}
+
+/* ---- structured source-resume editor ---- */
+function normData(d){ d.contact=d.contact||{}; ['skills','experience','education','projects','achievements','certifications'].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; }); d.summary=d.summary||''; return d; }
+function openEditor(resume){
+  S.view="app"; S.tab="data";
+  if(!$("#view")) render();
+  S.re = resume ? {id:resume.id,title:resume.title||'My resume',data:normData(deepclone(resume.data||{}))}
+                : {id:null,title:'My resume',data:normData(deepclone(S.emptyData))};
+  window.scrollTo(0,0); renderResumeEditor();
+}
+function editSource(id){ const r=S.resumes.find(x=>x.id===id); if(r) openEditor(r); }
+function reAdd(p){ S.re.data[p].push(''); renderResumeEditor(); }
+function reDel(p,i){ S.re.data[p].splice(i,1); renderResumeEditor(); }
+function reAddExp(){ S.re.data.experience.push({title:'',company:'',location:'',start_date:'',end_date:'',bullets:['']}); renderResumeEditor(); }
+function reAddBullet(i){ (S.re.data.experience[i].bullets=S.re.data.experience[i].bullets||[]).push(''); renderResumeEditor(); }
+function reDelBullet(i,k){ S.re.data.experience[i].bullets.splice(k,1); renderResumeEditor(); }
+function reAddEdu(){ S.re.data.education.push({degree:'',institution:'',location:'',graduation_date:'',details:''}); renderResumeEditor(); }
+function reAddProj(){ S.re.data.projects.push({name:'',description:''}); renderResumeEditor(); }
+function renderResumeEditor(){
+  const d=S.re.data, c=d.contact;
+  const strList=(arr,path,ph)=>arr.map((v,i)=>`<div style="display:flex;gap:6px;margin-top:6px">
+     <input value="${esc(v)}" placeholder="${ph}" oninput="S.re.data.${path}[${i}]=this.value">
+     <button class="icon-btn" onclick="reDel('${path}',${i})">✕</button></div>`).join('');
+  $("#view").innerHTML=`<div class="card fade">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">${S.re.id?'Review & edit your details':'Add your details'}</h2>${S.re.id?'<span class="badge">auto-parsed</span>':''}</div>
+    <p class="muted">Everything we extracted is below — fix anything that's off. Contact & education here are your source of truth (never changed by the AI).</p>
+    <h3 style="margin-top:14px">Contact</h3>
+    <div class="row"><div><label>Full name</label><input value="${esc(c.full_name)}" oninput="S.re.data.contact.full_name=this.value"></div>
+      <div><label>Email</label><input value="${esc(c.email)}" oninput="S.re.data.contact.email=this.value"></div></div>
+    <div class="row"><div><label>Phone</label><input value="${esc(c.phone)}" oninput="S.re.data.contact.phone=this.value"></div>
+      <div><label>Location</label><input value="${esc(c.location)}" oninput="S.re.data.contact.location=this.value"></div></div>
+    <div class="row"><div><label>LinkedIn</label><input value="${esc(c.linkedin)}" oninput="S.re.data.contact.linkedin=this.value"></div>
+      <div><label>Website</label><input value="${esc(c.website)}" oninput="S.re.data.contact.website=this.value"></div></div>
+    <label>Professional summary</label><textarea oninput="S.re.data.summary=this.value">${esc(d.summary)}</textarea>
+    <h3 style="margin-top:16px">Skills</h3><div>${strList(d.skills,'skills','Skill')}</div>
+    <button class="soft" style="margin-top:8px" onclick="reAdd('skills')">+ Skill</button>
+    <h3 style="margin-top:16px">Experience</h3>${d.experience.map((j,i)=>`<div class="q">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b>Role ${i+1}</b><button class="icon-btn" onclick="reDel('experience',${i})">🗑</button></div>
+      <div class="row"><div><label>Title</label><input value="${esc(j.title)}" oninput="S.re.data.experience[${i}].title=this.value"></div>
+        <div><label>Company</label><input value="${esc(j.company)}" oninput="S.re.data.experience[${i}].company=this.value"></div></div>
+      <div class="row"><div><label>Location</label><input value="${esc(j.location)}" oninput="S.re.data.experience[${i}].location=this.value"></div>
+        <div><label>Start</label><input value="${esc(j.start_date)}" oninput="S.re.data.experience[${i}].start_date=this.value"></div>
+        <div><label>End</label><input value="${esc(j.end_date)}" oninput="S.re.data.experience[${i}].end_date=this.value"></div></div>
+      <label>Bullets</label>${(j.bullets||[]).map((b,k)=>`<div style="display:flex;gap:6px;margin-top:6px">
+         <input value="${esc(b)}" oninput="S.re.data.experience[${i}].bullets[${k}]=this.value">
+         <button class="icon-btn" onclick="reDelBullet(${i},${k})">✕</button></div>`).join('')}
+      <button class="soft" style="margin-top:8px" onclick="reAddBullet(${i})">+ Bullet</button></div>`).join('')}
+    <button class="soft" onclick="reAddExp()">+ Add role</button>
+    <h3 style="margin-top:16px">Education</h3>${d.education.map((e,i)=>`<div class="q">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b>Education ${i+1}</b><button class="icon-btn" onclick="reDel('education',${i})">🗑</button></div>
+      <div class="row"><div><label>Degree</label><input value="${esc(e.degree)}" oninput="S.re.data.education[${i}].degree=this.value"></div>
+        <div><label>Institution</label><input value="${esc(e.institution)}" oninput="S.re.data.education[${i}].institution=this.value"></div></div>
+      <div class="row"><div><label>Location</label><input value="${esc(e.location)}" oninput="S.re.data.education[${i}].location=this.value"></div>
+        <div><label>Graduation</label><input value="${esc(e.graduation_date)}" oninput="S.re.data.education[${i}].graduation_date=this.value"></div></div>
+      <label>Details</label><input value="${esc(e.details)}" oninput="S.re.data.education[${i}].details=this.value"></div>`).join('')}
+    <button class="soft" onclick="reAddEdu()">+ Add education</button>
+    <h3 style="margin-top:16px">Projects</h3>${d.projects.map((p,i)=>`<div class="q">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b>Project ${i+1}</b><button class="icon-btn" onclick="reDel('projects',${i})">🗑</button></div>
+      <label>Name</label><input value="${esc(p.name)}" oninput="S.re.data.projects[${i}].name=this.value">
+      <label>Description</label><input value="${esc(p.description)}" oninput="S.re.data.projects[${i}].description=this.value"></div>`).join('')}
+    <button class="soft" onclick="reAddProj()">+ Add project</button>
+    <h3 style="margin-top:16px">Achievements</h3><div>${strList(d.achievements,'achievements','Achievement')}</div>
+    <button class="soft" style="margin-top:8px" onclick="reAdd('achievements')">+ Achievement</button>
+    <h3 style="margin-top:16px">Certifications</h3><div>${strList(d.certifications,'certifications','Certification')}</div>
+    <button class="soft" style="margin-top:8px" onclick="reAdd('certifications')">+ Certification</button>
+    <div style="margin-top:18px;display:flex;gap:10px"><button id="reSave" onclick="saveResumeEditor()">💾 Save</button>
+      <button class="ghost" onclick="renderData()">Cancel</button></div></div>`;
+}
+async function saveResumeEditor(){
+  const d=deepclone(S.re.data);
+  ['skills','achievements','certifications'].forEach(k=>d[k]=(d[k]||[]).map(s=>(s||'').trim()).filter(Boolean));
+  d.experience=(d.experience||[]).map(j=>({...j,bullets:(j.bullets||[]).map(b=>(b||'').trim()).filter(Boolean)}))
+    .filter(j=>j.title||j.company||(j.bullets&&j.bullets.length));
+  d.education=(d.education||[]).filter(e=>e.degree||e.institution);
+  d.projects=(d.projects||[]).filter(p=>p.name||p.description);
+  const body=JSON.stringify({title:S.re.title||'My resume',template:'technical',data:d});
+  const b=$("#reSave"); b.disabled=true; b.innerHTML=`<span class="spin"></span>Saving…`;
+  try{ if(S.re.id) await api(`/resumes/${S.re.id}`,{method:"PUT",body}); else await api("/resumes",{method:"POST",body});
+    await refreshData(); renderData();
+  }catch(e){ toast(e.message); b.disabled=false; b.textContent="💾 Save"; }
+}
+
+/* ================= TAILOR FLOW ================= */
+function renderTailor(){
+  if(S.resumes.length===0){ $("#view").innerHTML=`<div class="card fade"><h2>Add your data first</h2>
+    <p class="muted">Upload a resume or describe your experience under <b>Build Profile</b> before tailoring.</p>
+    <button onclick="setTab('data')">Go to Build Profile</button></div>`; return; }
+  const names=["Job","Gaps","Template","Result"];
+  const step=S.result?3:S.analysis?(S.analysis.questions.length?1:2):0;
+  const steps=names.map((n,i)=>`<span class="${i===step?'on':''}">${i+1}. ${n}</span>`).join("  ›  ");
+  $("#view").innerHTML=`<div class="card fade"><div class="steps">${steps}</div><div id="stepbody"></div></div>`;
+  [stepJob,stepGaps,stepTemplate,stepResult][step]();
+}
+function stepJob(){
+  $("#stepbody").innerHTML=`<h2>Describe the job</h2>
+    <label>Paste a job posting URL (optional)</label>
+    <div style="display:flex;gap:8px"><input id="j_url" placeholder="https://… link to the job posting">
+      <button id="fetchBtn" class="soft" style="white-space:nowrap" onclick="fetchUrl()">⬇ Fetch</button></div>
+    <p class="muted" style="margin:6px 0 0">We'll auto-fill the fields below. (Some sites need login or load via JavaScript — paste manually if fetch fails.)</p>
+    <div class="row" style="margin-top:8px"><div><label>Job title</label><input id="j_title" value="${esc(S.job.title)}" placeholder="Senior Backend Engineer"></div>
+      <div><label>Company</label><input id="j_co" value="${esc(S.job.company)}" placeholder="Acme Inc."></div></div>
+    <label>Job description</label><textarea id="j_jd" style="min-height:190px" placeholder="Paste the full job posting here…">${esc(S.job.jd)}</textarea>
+    <div style="margin-top:14px"><button id="anBtn" onclick="runAnalyze()">Analyze fit →</button></div>`;
+}
+async function fetchUrl(){
+  const url=$("#j_url").value.trim(); if(!url) return toast("Paste a job URL first.");
+  if(!/^https?:\/\//i.test(url)) return toast("Enter a full http(s):// URL.");
+  const b=$("#fetchBtn"); b.disabled=true; b.innerHTML=`<span class="spin"></span>Fetching…`;
+  try{ const r=await api("/tailor/extract-url",{method:"POST",body:JSON.stringify({url})});
+    S.job={title:r.job_title||'',company:r.company||'',jd:r.job_description||''}; stepJob();
+    toast("Fetched — review the fields, then Analyze.",true);
+  }catch(e){ toast(e.message); b.disabled=false; b.innerHTML="⬇ Fetch"; }
+}
+async function runAnalyze(){
+  S.job={title:$("#j_title").value,company:$("#j_co").value,jd:$("#j_jd").value};
+  if(!S.job.jd.trim()) return toast("Paste a job description first.");
+  const b=$("#anBtn"); b.disabled=true; b.innerHTML=`<span class="spin"></span>Analyzing…`;
+  try{ S.analysis=await api("/tailor/analyze",{method:"POST",body:JSON.stringify({job_title:S.job.title,company:S.job.company,job_description:S.job.jd})});
+    S.answers={}; renderTailor();
+  }catch(e){ toast(e.message); b.disabled=false; b.textContent="Analyze fit →"; }
+}
+function stepGaps(){
+  const a=S.analysis; const ms=a.match_score;
+  $("#stepbody").innerHTML=`<h2>A few quick questions</h2>
+    ${ms?`<div class="scores" style="margin-bottom:12px">${meter('Current match',ms.score)}</div>
+      ${ms.missing_keywords?.length?`<p class="muted">Missing for this role: ${ms.missing_keywords.map(esc).join(', ')}</p>`:''}`:''}
+    <div class="note">${esc(a.coverage_summary||'We found some gaps for this role.')} Answer what you can — leave blank to skip.</div>
+    ${a.matched_strengths?.length?`<p class="muted" style="margin-top:8px">Strengths: ${a.matched_strengths.map(esc).join(', ')}</p>`:''}
+    <div style="margin-top:14px">${a.questions.map(q=>`<div class="q"><label style="margin-top:0">${esc(q.topic||'')}</label>
+      <p style="margin:0 0 8px">${esc(q.question)}</p>
+      <textarea data-qid="${esc(q.id)}" oninput="setAnswer(this)">${esc(S.answers[q.id]||'')}</textarea></div>`).join('')}</div>
+    <div style="display:flex;gap:10px"><button onclick="goTemplate()">Continue →</button>
+      <button class="ghost" onclick="S.analysis=null;renderTailor()">← Back</button></div>`;
+}
+function setAnswer(el){ S.answers[el.dataset.qid]=el.value; }
+function goTemplate(){ S.analysis.questions=[]; renderTailor(); }
+function stepTemplate(){
+  if(S.includeSummary===null) S.includeSummary=!!(S.tmplById[S.template]?.style?.include_summary);
+  $("#stepbody").innerHTML=`<h2>Pick a template</h2>
+    <p class="muted">Live preview uses your own data. 🔒 templates are part of PRO.</p>
+    <div class="gallery" id="gal" style="margin-top:12px"></div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:16px;cursor:pointer;font-weight:600">
+      <input type="checkbox" id="incSum" ${S.includeSummary?'checked':''} onchange="S.includeSummary=this.checked;S.summaryTouched=true" style="width:auto"> Include a professional summary</label>
+    <p class="muted" style="margin:2px 0 0">You can also reorder or delete sections after generating.</p>
+    <div style="display:flex;gap:10px;margin-top:16px;align-items:center">
+      <button id="genBtn" onclick="runGenerate()">✨ Generate resume (1 credit)</button>
+      <span class="muted">You have <b>${creditsLeft()}</b> credit(s)</span>
+      <button class="ghost" onclick="restartTailor()">↺ Start over</button></div>`;
+  renderGallery("gal", S.profile, S.template, 'pickTpl');
+}
+function renderGallery(elId, data, selId, onPickName){
+  $("#"+elId).innerHTML=S.templates.map(t=>{
+    const locked=t.pro&&!isPro();
+    return `<div class="tpl ${selId===t.id?'sel':''}" onclick="${locked?'openPricing()':onPickName+`('${t.id}')`}">
+      ${t.pro?`<span class="lock badge ${locked?'':'pro'}" style="${locked?'':''}">${locked?'🔒 PRO':'PRO'}</span>`:''}
+      ${miniHTML(data,t.style)}<div class="cap"><h3>${esc(t.name)}</h3>${t.recommended?'<span class="star">★ Rec</span>':''}</div>
+      <p class="muted" style="margin:4px 0 0;font-size:11.5px">${esc(t.description)}</p></div>`; }).join('');
+}
+function pickTpl(id){ S.template=id; if(!S.summaryTouched) S.includeSummary=!!(S.tmplById[id]?.style?.include_summary); stepTemplate(); }
+async function runGenerate(){
+  const b=$("#genBtn"); b.disabled=true; b.innerHTML=`<span class="spin"></span>Generating, scoring & refining…`;
+  try{ S.result=await api("/tailor/generate",{method:"POST",body:JSON.stringify({job_title:S.job.title,company:S.job.company,job_description:S.job.jd,template:S.template,answers:S.answers,include_summary:S.includeSummary})});
+    S.includeSummary=S.result.layout?.include_summary ?? S.includeSummary;
+    S.edit=null; S.showTplPicker=false; loadBilling(); renderTailor();
+  }catch(e){ if(e.status===402||e.status===403){ openPricing(); }
+    toast(e.message); b.disabled=false; b.textContent="✨ Generate resume (1 credit)"; }
+}
+
+/* ---------------- RESULT PAGE (two-column) ---------------- */
+function stepResult(){
+  const r=S.result, sc=r.scores||{}, before=S.analysis?.match_score?.score;
+  $("#stepbody").innerHTML=`<h2>✅ Your tailored resume ${pageBadge(sc.pages)}</h2>
+    <div class="scores" style="margin:8px 0 4px">
+      ${meter('Match score', sc.match?.score, before)}
+      ${meter('ATS score', sc.ats?.score)}</div>
+    ${sc.match?.missing_keywords?.length?`<p class="muted">Still missing: ${sc.match.missing_keywords.map(esc).join(', ')}</p>`:''}
+    <div class="note" style="margin-top:6px"><b>What changed:</b> ${esc(r.match_summary||'')}</div>
+    <p class="muted" style="margin:8px 0 0">✓ Saved to your <a href="#" onclick="setTab('tracker');return false" style="color:var(--accent)">Job Tracker</a>.</p>
+    ${(sc.ats&&((sc.ats.strengths||[]).length||(sc.ats.flaws||[]).length))?`<details><summary>ATS details</summary>
+      ${listBlock('Strengths',sc.ats.strengths,'var(--ok)')}${listBlock('Flaws',sc.ats.flaws,'var(--danger)')}</details>`:''}
+    <div class="result-grid" style="margin-top:12px">
+      <div class="pdf-col">
+        <div class="toolbar">
+          <a href="/tailor/${r.id}/download?format=pdf"><button>⬇ PDF</button></a>
+          <a href="/tailor/${r.id}/download?format=docx"><button class="soft">⬇ .docx</button></a>
+          <button class="soft" onclick="toggleEdit()">${S.edit?'✕ Close editor':'✏️ Edit content'}</button>
+          <button class="soft" onclick="S.showTplPicker=!S.showTplPicker;stepResult()">🎨 Template</button>
+          <span class="badge">${esc(r.template)}</span></div>
+        <div id="tplpick"></div>
+        <div class="pdf-flex">
+          <div class="secstrip" id="layoutArea"></div>
+          <div style="flex:1;min-width:0" id="previewArea"></div></div>
+        <div class="card" style="background:var(--bg2);box-shadow:none;margin-top:12px">
+          <b>Not happy with it?</b> <span class="muted">Tell us what to change (optional) and regenerate — free.</span>
+          <textarea id="fb" style="margin-top:8px" placeholder="e.g. Emphasize leadership more, shorten the older roles, add my AWS work…"></textarea>
+          <div style="margin-top:8px"><button id="regenBtn" onclick="runRegen()">🔄 Regenerate</button></div></div>
+      </div>
+      <aside>
+        <div class="card" style="margin-bottom:0">
+          <b>📨 Outreach messages</b> ${isPro()?'':'<span class="badge pro">PRO</span>'}
+          ${isPro()?`
+          <p class="muted" style="margin:4px 0 8px">Personalized cold email, LinkedIn note, and referral ask for this exact role.</p>
+          <label style="margin-top:0">Recipient name (optional)</label><input id="o_name" placeholder="e.g. Priya (recruiter)">
+          <label>Tone</label><select id="o_tone"><option value="professional">Professional</option><option value="warm">Warm</option><option value="direct">Direct</option></select>
+          <label>Anything to emphasize? (optional)</label><input id="o_note" placeholder="e.g. met your team at PyCon">
+          <div style="margin-top:10px"><button id="oBtn" onclick="runOutreach()">${S.outreach?'🔄 Regenerate messages':'✨ Generate messages'}</button></div>
+          <div id="outreachArea"></div>`
+          :`<p class="muted" style="margin:6px 0 10px">Get a personalized cold email, LinkedIn connection note + message, and a referral request written for this exact job — a PRO feature.</p>
+          <button class="gold" onclick="openPricing()">⭐ Upgrade to PRO</button>`}
+        </div>
+        <div style="margin-top:12px"><button class="ghost" style="width:100%" onclick="restartTailor()">↺ Tailor another job</button></div>
+      </aside>
+    </div>`;
+  renderSectionStrip();
+  if(S.showTplPicker){ $("#tplpick").innerHTML=`<div class="gallery" style="margin-bottom:10px"></div>`;
+    renderGallery2($("#tplpick .gallery"), r.tailored_data, r.template); }
+  if(S.outreach&&isPro()) renderOutreach();
+  renderPreview();
+}
+function renderGallery2(el, data, selId){
+  el.innerHTML=S.templates.map(t=>{
+    const locked=t.pro&&!isPro();
+    return `<div class="tpl ${selId===t.id?'sel':''}" onclick="${locked?'openPricing()':`changeTpl('${t.id}')`}">
+      ${t.pro?`<span class="lock badge pro">${locked?'🔒 PRO':'PRO'}</span>`:''}
+      ${miniHTML(data,t.style)}<div class="cap"><h3>${esc(t.name)}</h3>${t.recommended?'<span class="star">★</span>':''}</div></div>`; }).join('');
+}
+async function changeTpl(id){
+  try{ S.result=await api(`/tailor/${S.result.id}/template`,{method:"PUT",body:JSON.stringify({template:id})}); stepResult();
+  }catch(e){ if(e.status===403) openPricing(); toast(e.message); }
+}
+function effStyle(){ const s=Object.assign({}, S.tmplById[S.result.template]?.style||{}); const L=S.result.layout||{};
+  if(L.section_order) s.section_order=L.section_order;
+  if('include_summary' in L) s.include_summary=L.include_summary;
+  const hid=new Set(L.hidden||[]); s.section_order=(s.section_order||[]).filter(k=>!hid.has(k));
+  return s; }
+function renderPreview(){
+  const r=S.result, style=effStyle();
+  if(S.edit){ $("#previewArea").innerHTML=editorHTML(S.edit, style); return; }
+  $("#previewArea").innerHTML=`<iframe title="PDF preview" src="/tailor/${r.id}/preview.pdf?t=${Date.now()}"
+    style="width:100%;height:760px;border:1px solid var(--border);border-radius:10px;background:#fff"></iframe>`;
+}
+function toggleEdit(){ S.edit = S.edit?null:deepclone(S.result.tailored_data); stepResult(); }
+
+/* ---- section strip: reorder / delete / restore, beside the PDF ---- */
+const SECTION_LABELS={summary:'Summary',skills:'Skills',experience:'Experience',projects:'Projects',education:'Education',achievements:'Achievements',certifications:'Certs'};
+function renderSectionStrip(){
+  const el=$("#layoutArea"); if(!el) return;
+  const L=S.result.layout||{}; const order=L.section_order||[]; const hidden=new Set(L.hidden||[]);
+  const visible=order.filter(k=>!hidden.has(k)&&(k!=='summary'||L.include_summary));
+  const removed=order.filter(k=>hidden.has(k)||(k==='summary'&&!L.include_summary));
+  el.innerHTML=`<div class="ss-title">Sections</div>`+
+    visible.map((k,vi)=>`<div class="ss-chip"><span>${esc(SECTION_LABELS[k]||k)}</span><span class="ops">
+      <button class="mini-btn" ${vi===0?'disabled':''} onclick="moveSection('${k}',-1)" title="Move up">↑</button>
+      <button class="mini-btn" ${vi===visible.length-1?'disabled':''} onclick="moveSection('${k}',1)" title="Move down">↓</button>
+      <button class="mini-btn" onclick="deleteSection('${k}')" title="Remove section">✕</button></span></div>`).join('')+
+    (removed.length?`<div class="ss-title" style="margin-top:8px">Removed</div>`+
+      removed.map(k=>`<div class="ss-chip off"><span>${esc(SECTION_LABELS[k]||k)}</span>
+        <button class="mini-btn" onclick="restoreSection('${k}')" title="Restore">↩</button></div>`).join(''):'');
+}
+function moveSection(key,dir){
+  const L=S.result.layout; if(!L||!L.section_order) return;
+  const o=L.section_order, hidden=new Set(L.hidden||[]);
+  const vis=o.filter(k=>!hidden.has(k)&&(k!=='summary'||L.include_summary));
+  const vi=vis.indexOf(key), vj=vi+dir; if(vi<0||vj<0||vj>=vis.length) return;
+  const a=o.indexOf(key), b=o.indexOf(vis[vj]);
+  const backup=deepclone(L); [o[a],o[b]]=[o[b],o[a]]; saveLayout(backup);
+}
+function deleteSection(key){
+  const L=S.result.layout; if(!L) return; const backup=deepclone(L);
+  if(key==='summary'){ L.include_summary=false; }
+  else{ L.hidden=L.hidden||[]; if(!L.hidden.includes(key)) L.hidden.push(key); }
+  saveLayout(backup);
+}
+function restoreSection(key){
+  const L=S.result.layout; if(!L) return; const backup=deepclone(L);
+  if(key==='summary'){ L.include_summary=true; }
+  else{ L.hidden=(L.hidden||[]).filter(x=>x!==key); }
+  saveLayout(backup);
+}
+async function saveLayout(backup){
+  try{ S.result=await api(`/tailor/${S.result.id}/layout`,{method:"PUT",body:JSON.stringify(
+      {section_order:S.result.layout.section_order, include_summary:S.result.layout.include_summary,
+       hidden:S.result.layout.hidden||[]})}); stepResult();
+  }catch(e){ if(backup) S.result.layout=backup; toast(e.message); stepResult(); }
+}
+
+/* ---- inline content editor ---- */
+function editorHTML(d, style){
+  const c=d.contact||{};
+  let h=`<div class="card" style="box-shadow:none;border:1px dashed var(--border)">
+    <p class="muted">Editing content. Contact & education are locked to your real data — edit those in My Profile.</p>
+    <label>Contact (locked)</label><input value="${esc([c.full_name,c.email,c.phone].filter(Boolean).join(' · '))}" readonly>`;
+  if(style.include_summary){ h+=`<label>Summary</label><textarea oninput="S.edit.summary=this.value">${esc(d.summary||'')}</textarea>`; }
+  h+=`<label>Skills (comma-separated)</label><input value="${esc((d.skills||[]).join(', '))}" oninput="S.edit.skills=this.value.split(',').map(s=>s.trim()).filter(Boolean)">`;
+  (d.experience||[]).forEach((j,i)=>{ h+=`<div class="q"><div class="row">
+      <div><label style="margin-top:0">Title</label><input value="${esc(j.title)}" oninput="S.edit.experience[${i}].title=this.value"></div>
+      <div><label style="margin-top:0">Company</label><input value="${esc(j.company)}" oninput="S.edit.experience[${i}].company=this.value"></div></div>
+    <label>Bullets (one per line)</label><textarea style="min-height:90px" oninput="S.edit.experience[${i}].bullets=this.value.split('\\n').map(s=>s.trim()).filter(Boolean)">${esc((j.bullets||[]).join('\n'))}</textarea></div>`; });
+  if((d.projects||[]).length) (d.projects||[]).forEach((p,i)=>{ h+=`<div class="q"><label style="margin-top:0">Project name</label><input value="${esc(p.name||'')}" oninput="S.edit.projects[${i}].name=this.value">
+    <label>Description</label><input value="${esc(p.description||'')}" oninput="S.edit.projects[${i}].description=this.value"></div>`; });
+  h+=`<label>Achievements (one per line)</label><textarea oninput="S.edit.achievements=this.value.split('\\n').map(s=>s.trim()).filter(Boolean)">${esc((d.achievements||[]).join('\n'))}</textarea>`;
+  h+=`<label>Certifications (one per line)</label><textarea oninput="S.edit.certifications=this.value.split('\\n').map(s=>s.trim()).filter(Boolean)">${esc((d.certifications||[]).join('\n'))}</textarea>`;
+  h+=`<div style="margin-top:12px;display:flex;gap:10px"><button id="saveEditBtn" onclick="saveEdit()">💾 Save & re-score</button>
+    <button class="ghost" onclick="toggleEdit()">Cancel</button></div></div>
+    <h3 style="margin:14px 0 8px">Live preview</h3><div class="preview-wrap">${previewHTML(d,style)}</div>`;
+  return h;
+}
+async function saveEdit(){
+  const b=$("#saveEditBtn"); b.disabled=true; b.innerHTML=`<span class="spin"></span>Saving…`;
+  try{ S.result=await api(`/tailor/${S.result.id}`,{method:"PUT",body:JSON.stringify({tailored_data:S.edit})}); S.edit=null; stepResult();
+  }catch(e){ toast(e.message); b.disabled=false; b.textContent="💾 Save & re-score"; }
+}
+async function runRegen(){
+  const b=$("#regenBtn"); b.disabled=true; b.innerHTML=`<span class="spin"></span>Regenerating…`;
+  try{ S.result=await api(`/tailor/${S.result.id}/regenerate`,{method:"POST",body:JSON.stringify({feedback:$("#fb").value})}); S.edit=null; stepResult();
+  }catch(e){ toast(e.message); b.disabled=false; b.textContent="🔄 Regenerate"; }
+}
+function restartTailor(){ S.analysis=null; S.result=null; S.answers={}; S.edit=null; S.showTplPicker=false; S.outreach=null; S.includeSummary=null; S.summaryTouched=false; renderTailor(); }
+
+/* ---- outreach (PRO) ---- */
+async function runOutreach(){
+  const b=$("#oBtn"); b.disabled=true; b.innerHTML=`<span class="spin"></span>Writing…`;
+  try{ const r=await api(`/tailor/${S.result.id}/outreach`,{method:"POST",body:JSON.stringify({
+      recipient_name:$("#o_name").value, note:$("#o_note").value, tone:$("#o_tone").value})});
+    S.outreach=r.messages; stepResult();
+  }catch(e){ if(e.status===403) openPricing(); toast(e.message); b.disabled=false; b.innerHTML="✨ Generate messages"; }
+}
+function outreachText(key){
+  const m=S.outreach||{}, S_=v=>String(v||'');
+  if(key==='cold_email'){ const c=m.cold_email||{}; return (c.subject?'Subject: '+S_(c.subject)+'\n\n':'')+S_(c.body); }
+  if(key==='li_note') return S_((m.linkedin||{}).connection_note);
+  if(key==='li_msg') return S_((m.linkedin||{}).message);
+  if(key==='referral'){ const r=m.referral||{}; return (r.subject?'Subject: '+S_(r.subject)+'\n\n':'')+S_(r.body); }
+  return '';
+}
+function msgCard(title, subject, body, key){
+  return `<div class="q"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <b>${esc(title)}</b><button class="soft" onclick="copyMsg('${key}',this)">📋 Copy</button></div>
+    ${subject?`<div style="margin-top:6px"><span class="muted">Subject:</span> <b>${esc(subject)}</b></div>`:''}
+    <div style="margin-top:6px;white-space:pre-wrap;line-height:1.5;font-size:13px">${esc(body)}</div></div>`;
+}
+function renderOutreach(){
+  const m=S.outreach||{}; const ce=m.cold_email||{}, li=m.linkedin||{}, rf=m.referral||{};
+  const el=$("#outreachArea"); if(!el) return;
+  el.innerHTML=`<div style="margin-top:12px">
+    ${msgCard('Cold email', ce.subject||'', ce.body||'', 'cold_email')}
+    ${li.connection_note?msgCard('LinkedIn note (≤300 chars)','',li.connection_note,'li_note'):''}
+    ${li.message?msgCard('LinkedIn message','',li.message,'li_msg'):''}
+    ${msgCard('Referral request', rf.subject||'', rf.body||'', 'referral')}</div>`;
+}
+function copyMsg(key, btn){
+  const text=outreachText(key);
+  if(!text){ return toast("Nothing to copy."); }
+  navigator.clipboard.writeText(text).then(()=>{ const o=btn.textContent; btn.textContent="✓ Copied"; setTimeout(()=>btn.textContent=o,1500); })
+    .catch(()=>toast("Copy failed — select and copy manually."));
+}
+
+/* ================= JOB TRACKER ================= */
+const STATUSES=["saved","applied","interviewing","offer","rejected"];
+async function renderTracker(){
+  $("#view").innerHTML=`<div class="card fade"><div style="display:flex;justify-content:space-between;align-items:center">
+    <h2 style="margin:0">Job Tracker</h2><button class="soft" onclick="openAppForm()">+ Add application</button></div>
+    <p class="muted">Resumes you generate are auto-added here. Update status, jot notes, and re-download anytime.</p>
+    <div id="appsBox" style="margin-top:12px"><p class="muted"><span class="spin"></span> Loading…</p></div></div>`;
+  try{ S.applications=await api("/applications"); renderApps(); }
+  catch(e){ $("#appsBox").innerHTML=`<p class="muted" style="color:var(--danger)">${esc(e.message)}</p>`; }
+}
+function renderApps(){
+  const apps=S.applications||[];
+  if(!apps.length){ $("#appsBox").innerHTML=`<p class="muted">No applications yet. Tailor a resume (auto-adds here) or add one manually.</p>`; return; }
+  const counts=STATUSES.map(s=>`<span class="pill">${s}: ${apps.filter(a=>a.status===s).length}</span>`).join('');
+  $("#appsBox").innerHTML=`<div style="margin-bottom:12px">${counts}</div>`+apps.map(appRow).join('');
+}
+function appRow(a){
+  return `<div class="resitem" style="flex-direction:column;align-items:stretch;gap:8px">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+      <div><b>${esc(a.job_title||'(untitled role)')}</b> ${a.company?'· '+esc(a.company):''}
+        ${a.match_score!=null?`<span class="badge" style="background:var(--accent-soft);color:var(--accent);border:0">match ${a.match_score}</span>`:''}</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select onchange="setAppField(${a.id},'status',this.value)">${STATUSES.map(s=>`<option ${a.status===s?'selected':''}>${s}</option>`).join('')}</select>
+        <button class="icon-btn" onclick="delApp(${a.id})">🗑</button></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      ${a.tailored_id?`<a href="/tailor/${a.tailored_id}/download?format=pdf"><button class="soft">⬇ PDF</button></a>
+        <a href="/tailor/${a.tailored_id}/download?format=docx"><button class="soft">⬇ docx</button></a>`:''}
+      ${safeUrl(a.job_url)?`<a href="${esc(a.job_url)}" target="_blank" rel="noopener"><button class="ghost">↗ Posting</button></a>`:''}
+      <input placeholder="Applied date" value="${esc(a.applied_date||'')}" onchange="setAppField(${a.id},'applied_date',this.value)" style="max-width:200px">
+    </div>
+    <textarea placeholder="Notes…" style="min-height:50px" onchange="setAppField(${a.id},'notes',this.value)">${esc(a.notes||'')}</textarea></div>`;
+}
+async function setAppField(id,field,val){
+  try{ await api(`/applications/${id}`,{method:"PUT",body:JSON.stringify({[field]:val})});
+    const a=S.applications.find(x=>x.id===id); if(a)a[field]=val; if(field==='status') renderApps();
+  }catch(e){ toast(e.message); }
+}
+async function delApp(id){ try{ await api(`/applications/${id}`,{method:"DELETE"}); S.applications=S.applications.filter(x=>x.id!==id); renderApps(); }catch(e){ toast(e.message); } }
+function openAppForm(){
+  $("#appsBox").innerHTML=`<div class="q"><h3>New application</h3>
+    <div class="row"><div><label style="margin-top:6px">Job title</label><input id="na_title"></div><div><label style="margin-top:6px">Company</label><input id="na_co"></div></div>
+    <div class="row"><div><label>Job URL</label><input id="na_url"></div><div><label>Status</label>
+      <select id="na_status">${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select></div></div>
+    <label>Notes</label><textarea id="na_notes"></textarea>
+    <div style="margin-top:10px;display:flex;gap:10px"><button onclick="saveApp()">Save</button><button class="ghost" onclick="renderApps()">Cancel</button></div></div>`;
+}
+async function saveApp(){
+  const body=JSON.stringify({job_title:$("#na_title").value,company:$("#na_co").value,job_url:$("#na_url").value,status:$("#na_status").value,notes:$("#na_notes").value});
+  try{ await api("/applications",{method:"POST",body}); S.applications=await api("/applications"); renderApps(); }catch(e){ toast(e.message); }
+}
+
+/* ================= BILLING / PRICING ================= */
+function openPricing(){
+  const el=$("#pricing"); el.classList.remove("hidden");
+  const b=S.billing;
+  if(!b){ el.innerHTML=`<div class="modal"><p class="muted">Loading…</p></div>`;
+    loadBilling().then(()=>{ if(S.billing) openPricing();
+      else el.innerHTML=`<div class="modal"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Pricing unavailable</h2><button class="icon-btn" onclick="closePricing()">✕</button></div><p class="muted">Couldn't load pricing right now — please try again in a moment.</p></div>`; }); return; }
+  const packs=(b.items||[]).filter(i=>!i.pro);
+  const pro=(b.items||[]).find(i=>i.pro);
+  el.innerHTML=`<div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Get more resumes</h2>
+      <button class="icon-btn" onclick="closePricing()">✕</button></div>
+    <p class="muted">1 credit = 1 tailored resume (with scoring, auto-refinement, edits, template switches and regenerations included). You have <b>${b.credits}</b> credit(s)${b.is_pro?' · <span class="badge pro">PRO</span> until '+esc((b.pro_expires_at||'').slice(0,10)):''}.</p>
+    <div class="plans">
+      ${packs.map(p=>`<div class="plan"><div class="muted">${esc(p.label)}</div>
+        <div class="price">${money(p.amount)}</div>
+        <div class="muted" style="font-size:12px">${money(Math.round(p.amount/p.credits))} / resume</div>
+        <button style="margin-top:10px;width:100%" onclick="buyItem('${esc(p.kind)}')">Buy</button></div>`).join('')}
+      ${pro?`<div class="plan pro"><div class="muted">⭐ PRO — monthly</div>
+        <div class="price">${money(pro.amount)}</div>
+        <ul><li><b>${pro.credits} credits</b> every month</li><li>Premium templates 🔒</li>
+          <li>Outreach messages (cold email, LinkedIn, referral)</li><li>All future PRO features</li></ul>
+        <button class="gold" style="width:100%" onclick="buyItem('pro')">Go PRO</button></div>`:''}
+    </div>
+    ${b.payments_configured?'':(S.health.environment!=='production'
+      ?`<p class="note" style="margin-top:14px">Payments aren't configured in this environment.
+         <button class="soft" onclick="devGrant()">Dev: +5 credits</button></p>`
+      :`<p class="note" style="margin-top:14px">Payments are being set up — please check back soon.</p>`)}
+  </div>`;
+}
+function closePricing(){ $("#pricing").classList.add("hidden"); }
+$("#pricing").addEventListener("click",e=>{ if(e.target.id==="pricing") closePricing(); });
+let _rzpReady=null;
+function ensureRzp(){
+  if(window.Razorpay) return Promise.resolve();
+  if(_rzpReady) return _rzpReady;
+  _rzpReady=new Promise((res,rej)=>{ const s=document.createElement("script");
+    s.src="https://checkout.razorpay.com/v1/checkout.js"; s.onload=res;
+    s.onerror=()=>rej(new Error("Could not load the payment window.")); document.head.appendChild(s); });
+  return _rzpReady;
+}
+async function buyItem(kind){
+  try{
+    const o=await api("/billing/order",{method:"POST",body:JSON.stringify({kind})});
+    await ensureRzp();
+    const rz=new Razorpay({ key:o.key_id, amount:o.amount, currency:o.currency, name:o.name,
+      description:o.label, order_id:o.order_id, prefill:{email:o.email},
+      theme:{color:"#4f7cff"},
+      handler:async(resp)=>{
+        try{ const v=await api("/billing/verify",{method:"POST",body:JSON.stringify(resp)});
+          if(S.billing){ S.billing.credits=v.credits; S.billing.is_pro=v.is_pro; }
+          if(S.user){ S.user.credits=v.credits; S.user.is_pro=v.is_pro; }
+          renderHeader(); closePricing(); toast("Payment successful — you're all set! ⚡",true);
+          render();  // refresh the current view so unlocked PRO features appear
+        }catch(e){ toast(e.message); } } });
+    rz.open();
+  }catch(e){ toast(e.message); }
+}
+async function devGrant(){
+  try{ const r=await api("/billing/dev-grant",{method:"POST",body:JSON.stringify({credits:5})});
+    if(S.billing) S.billing.credits=r.credits; renderHeader(); openPricing(); toast("+5 credits (dev)",true);
+  }catch(e){ toast(e.message); }
+}
+
+init().catch(e=>app.innerHTML=`<div class="card">Error: ${esc(e.message)}</div>`);
+</script>
+</body>
+</html>

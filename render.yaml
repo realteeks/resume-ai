@@ -1,0 +1,54 @@
+# Render Blueprint — deploy with one click from your GitHub repo.
+# https://render.com  (free web service tier)
+services:
+  - type: web
+    name: job-run-place
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: ENVIRONMENT
+        value: production
+      - key: TRUST_PROXY   # Render fronts the app with a trusted proxy
+        value: "true"
+      # Auto-generated strong secret for session cookies.
+      - key: APP_SECRET_KEY
+        generateValue: true
+      # Set these in the Render dashboard (Environment tab) — never commit them.
+      - key: BASE_URL          # e.g. https://job.run.place
+        sync: false
+      - key: DATABASE_URL      # Supabase Session-pooler URI (?sslmode=require)
+        sync: false
+      - key: GEMINI_API_KEYS   # comma-separated free keys
+        sync: false
+      - key: GROQ_API_KEYS     # optional fallback
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: PRIMARY_PROVIDER
+        value: gemini
+      - key: GEMINI_MODELS
+        value: gemma-4-31b-it,gemma-4-26b-a4b-it
+      # Pricing — change anytime, no redeploy of code needed.
+      - key: CURRENCY
+        value: INR
+      - key: CREDIT_PRICE
+        value: "49"
+      - key: CREDIT_PACKS
+        value: "3,5,10"
+      - key: PRO_PRICE
+        value: "299"
+      - key: PRO_MONTHLY_CREDITS
+        value: "30"
+      - key: SIGNUP_CREDITS
+        value: "3"
